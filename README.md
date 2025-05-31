@@ -1,5 +1,7 @@
 # roboface
 
+# Cloning Roboface and all of the supported environements
+git clone --recursive git@github.com:Roboface/roboface.git
 
 # Python Package and virtual environments managing
 We use uv.
