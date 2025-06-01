@@ -15,8 +15,11 @@ $ cd roboface
 $ curl -Ls https://astral.sh/uv/install.sh | bash            #   or brew install uv / pipx install uv
 
 # 3. Enable direnv so the correct .venv is auto-activated
+$ curl -sfL https://direnv.net/install.sh | bash
+# Add the following line to the ~/.bashrc:
+$ eval "$(direnv hook bash)"
+# Write this in the terminal at the root directory (/roboface) and the roboface/SimplerEnv directory
 $ direnv allow                                              # once per clone
-$ eval "$(direnv hook bash)" # <- put the following line in your ~/.bashrc file
 
 # 4. Create / update the project environment
 $ uv sync                                                   # installs exact versions from uv.lock into .venv (will check if the env is up-to-date as well)
@@ -25,6 +28,12 @@ $ uv sync                                                   # installs exact ver
 $ uv run SimplerEnv/scripts/getting_started.py              
 ```
 
+### When running on a VM, you should:
+```bash
+$ apt update
+$ apt upgrade
+$ apt install vim
+```
 You are now ready to develop. The steps above take **well under a minute** on a warm cache.
 
 ---
