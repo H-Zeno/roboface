@@ -14,14 +14,15 @@ $ cd roboface
 # 2. Install the ultra-fast Python tool-chain manager `uv`
 $ curl -Ls https://astral.sh/uv/install.sh | bash            #   or brew install uv / pipx install uv
 
-# 3. Create / update the project environment
+# 3. Enable direnv so the correct .venv is auto-activated
+$ direnv allow                                              # once per clone
+$ eval "$(direnv hook bash)" # <- but the following line in your ~/.bashrc file
+
+# 4. Create / update the project environment
 $ uv sync                                                   # installs exact versions from uv.lock into .venv (will check if the env is up-to-date as well)
 
-# 4. Enable direnv so the correct .venv is auto-activated
-$ direnv allow                                              # once per clone
-
 # 5. Smoke-test
-$ uv run python main.py                                     # → "Hello from roboface!"
+$ uv run SimplerEnv/scripts/getting_started.py              # → "Hello from roboface!"
 ```
 
 You are now ready to develop. The steps above take **well under a minute** on a warm cache.
