@@ -16,13 +16,13 @@ $ curl -Ls https://astral.sh/uv/install.sh | bash            #   or brew install
 
 # 3. Enable direnv so the correct .venv is auto-activated
 $ direnv allow                                              # once per clone
-$ eval "$(direnv hook bash)" # <- but the following line in your ~/.bashrc file
+$ eval "$(direnv hook bash)" # <- put the following line in your ~/.bashrc file
 
 # 4. Create / update the project environment
 $ uv sync                                                   # installs exact versions from uv.lock into .venv (will check if the env is up-to-date as well)
 
 # 5. Smoke-test
-$ uv run SimplerEnv/scripts/getting_started.py              # → "Hello from roboface!"
+$ uv run SimplerEnv/scripts/getting_started.py              
 ```
 
 You are now ready to develop. The steps above take **well under a minute** on a warm cache.
