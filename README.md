@@ -6,16 +6,33 @@ Roboface is an **AI-native open-source robotics stack**. This repository is the 
 
 ## 1. TL;DR – first time setup
 
+### Prerequisites:
+
+#### When running on a VM, you should:
+```bash
+$ apt update
+$ apt upgrade
+$ apt install vim
+```
+#### On every machine
+```bash
+# Install the ultra-fast Python tool-chain manager `uv`
+$ curl -Ls https://astral.sh/uv/install.sh | bash            #   or brew install uv / pipx install uv
+
+# Install direnv to make sure that we always work in the correct .venv
+$ curl -sfL https://direnv.net/install.sh | bash
+```
+
+
+
 ```bash
 # 1. Clone *recursively* so that submodules are fetched too
 $ git clone --recursive https://github.com/Roboface/roboface.git
 $ cd roboface
 
-# 2. Install the ultra-fast Python tool-chain manager `uv`
-$ curl -Ls https://astral.sh/uv/install.sh | bash            #   or brew install uv / pipx install uv
 
 # 3. Enable direnv so the correct .venv is auto-activated
-$ curl -sfL https://direnv.net/install.sh | bash
+
 # Add the following line to the ~/.bashrc:
 $ eval "$(direnv hook bash)"
 # Write this in the terminal at the root directory (/roboface) and the roboface/SimplerEnv directory
@@ -28,12 +45,7 @@ $ uv sync                                                   # installs exact ver
 $ uv run SimplerEnv/scripts/getting_started.py              
 ```
 
-### When running on a VM, you should:
-```bash
-$ apt update
-$ apt upgrade
-$ apt install vim
-```
+
 You are now ready to develop. The steps above take **well under a minute** on a warm cache.
 
 ---
