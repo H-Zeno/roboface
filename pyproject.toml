@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "The AI Native Open Source Robotics Stack"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "simpler-env",
+]
+
+
+[tool.uv.sources]
+simpler-env = { path = "SimplerEnv", editable = true }
