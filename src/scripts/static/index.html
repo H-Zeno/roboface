@@ -28,24 +28,28 @@
                 document.getElementById('video').srcObject = event.streams[0];
             };
 
-            pc.addTransceiver('video', {'direction': 'recvonly'});
+            pc.onicecandidate = (e) => {
+                if (e.candidate === null) {
+                    // ICE gathering is complete
+                    const offer = pc.localDescription;
+                    fetch('/offer', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            sdp: offer.sdp,
+                            type: offer.type,
+                        }),
+                    }).then(res => res.json()).then(answer => {
+                        pc.setRemoteDescription(answer);
+                    });
+                }
+            };
 
+            pc.addTransceiver('video', {'direction': 'recvonly'});
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-
-            const response = await fetch('/offer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    sdp: pc.localDescription.sdp,
-                    type: pc.localDescription.type,
-                }),
-            });
-
-            const answer = await response.json();
-            await pc.setRemoteDescription(answer);
         };
     </script>
 </body>

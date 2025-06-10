@@ -2,17 +2,24 @@ import asyncio
 import json
 import logging
 import os
+import time
 import uuid
 
 import cv2
 import numpy as np
 import simpler_env
 from aiohttp import web
-from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc import (
+    RTCConfiguration,
+    RTCIceServer,
+    RTCPeerConnection,
+    RTCSessionDescription,
+)
 from aiortc.mediastreams import MediaStreamTrack
 from av import VideoFrame
 from simpler_env.utils.env.observation_utils import get_image_from_maniskill2_obs_dict
 
+logging.basicConfig(level=logging.INFO)
 ROOT = os.path.dirname(__file__)
 pcs = set()
 
@@ -42,16 +49,25 @@ async def offer(request):
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    pc = RTCPeerConnection()
+    config = RTCConfiguration(
+        iceServers=[
+            RTCIceServer("stun:stun.l.google.com:19302"),
+            RTCIceServer("stun:stun1.l.google.com:19302"),
+        ]
+    )
+    pc = RTCPeerConnection(configuration=config)
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     pcs.add(pc)
 
-    log_info = lambda msg, *args: logging.info(pc_id + " " + msg, *args)
+    def log_info(msg, *args):
+        logging.info(pc_id + " " + msg, *args)
 
     log_info("Created for %s", request.remote)
 
     # prepare local media
     player = VideoTransformTrack()
+    pc.addTrack(player)
+    pc.simulation_task = asyncio.create_task(run_simulation(player))
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -63,7 +79,7 @@ async def offer(request):
     @pc.on("iceconnectionstatechange")
     async def on_iceconnectionstatechange():
         log_info("ICE connection state is %s", pc.iceConnectionState)
-        if pc.iceConnectionState == "failed":
+        if pc.iceConnectionState in ["failed", "closed"]:
             if hasattr(pc, "simulation_task"):
                 pc.simulation_task.cancel()
             await pc.close()
@@ -73,15 +89,12 @@ async def offer(request):
     def on_track(track):
         log_info("Track %s received", track.kind)
 
-        if track.kind == "video":
-            pc.addTrack(player)
-            pc.simulation_task = asyncio.create_task(run_simulation(player))
-
         @track.on("ended")
         async def on_ended():
             log_info("Track %s ended", track.kind)
-            if hasattr(pc, "simulation_task"):
-                pc.simulation_task.cancel()
+            # The simulation is tied to the peer connection, not an individual
+            # track so we don't need to cancel it here. It will be cancelled
+            # when the ice connection state changes to failed or closed.
             await player.stop()
 
     # handle offer
@@ -114,21 +127,30 @@ async def run_simulation(player):
     print("Instruction", instruction)
 
     done, truncated = False, False
-    while not (done or truncated):
+    for i in range(10000):
         image = get_image_from_maniskill2_obs_dict(env, obs)
 
         # a temporary fix for the issue of the image being in BGR format
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        frame = VideoFrame.from_ndarray(image, format="rgb24")
+        # Ensure the numpy array is C-contiguous
+        image = np.ascontiguousarray(image)
+
+        # Manually construct the VideoFrame to bypass potential bugs
+        # in from_ndarray
+        frame = VideoFrame(width=image.shape[1], height=image.shape[0], format="rgb24")
+        frame.planes[0].update(image.tobytes())
+
         await player._queue.put(frame)
 
-        action = env.action_space.sample()  # replace this with your policy inference
+        # replace this with your policy inference
+        action = env.action_space.sample()
         obs, reward, done, truncated, info = env.step(action)
         new_instruction = env.get_language_instruction()
         if new_instruction != instruction:
             instruction = new_instruction
             print("New Instruction", instruction)
+        time.sleep(0.01)
 
     episode_stats = info.get("episode_stats", {})
     print("Episode stats", episode_stats)
