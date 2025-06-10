@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import time
 import uuid
 
 import cv2
@@ -15,7 +14,7 @@ from aiortc import (
     RTCPeerConnection,
     RTCSessionDescription,
 )
-from aiortc.mediastreams import MediaStreamTrack
+from aiortc.mediastreams import MediaStreamError, VideoStreamTrack
 from av import VideoFrame
 from simpler_env.utils.env.observation_utils import get_image_from_maniskill2_obs_dict
 
@@ -24,7 +23,7 @@ ROOT = os.path.dirname(__file__)
 pcs = set()
 
 
-class VideoTransformTrack(MediaStreamTrack):
+class VideoTransformTrack(VideoStreamTrack):
     """
     A video stream track that transforms frames from the simulation.
     """
@@ -37,7 +36,17 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
         frame = await self._queue.get()
+        if frame is None:
+            raise MediaStreamError()
+
+        pts, time_base = await self.next_timestamp()
+        frame.pts = pts
+        frame.time_base = time_base
         return frame
+
+    def stop(self):
+        super().stop()
+        self._queue.put_nowait(None)
 
 
 async def index(request):
@@ -95,7 +104,7 @@ async def offer(request):
             # The simulation is tied to the peer connection, not an individual
             # track so we don't need to cancel it here. It will be cancelled
             # when the ice connection state changes to failed or closed.
-            await player.stop()
+            player.stop()
 
     # handle offer
     await pc.setRemoteDescription(offer)
@@ -119,7 +128,11 @@ async def on_shutdown(app):
     pcs.clear()
 
 
-async def run_simulation(player):
+def blocking_run_simulation(loop, player):
+    """
+    This function runs in a separate thread and executes the blocking
+    simulation steps.
+    """
     env = simpler_env.make("google_robot_pick_coke_can")
     obs, reset_info = env.reset()
     instruction = env.get_language_instruction()
@@ -127,34 +140,37 @@ async def run_simulation(player):
     print("Instruction", instruction)
 
     done, truncated = False, False
-    for i in range(10000):
+    while not (done or truncated):
         image = get_image_from_maniskill2_obs_dict(env, obs)
 
-        # a temporary fix for the issue of the image being in BGR format
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # # a temporary fix for the issue of the image being in BGR format
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Ensure the numpy array is C-contiguous
-        image = np.ascontiguousarray(image)
+        # Manually construct the VideoFrame
+        frame = VideoFrame.from_ndarray(image, format="rgb24")
 
-        # Manually construct the VideoFrame to bypass potential bugs
-        # in from_ndarray
-        frame = VideoFrame(width=image.shape[1], height=image.shape[0], format="rgb24")
-        frame.planes[0].update(image.tobytes())
+        # Safely put the frame in the queue from the separate thread
+        loop.call_soon_threadsafe(player._queue.put_nowait, frame)
 
-        await player._queue.put(frame)
-
-        # replace this with your policy inference
         action = env.action_space.sample()
         obs, reward, done, truncated, info = env.step(action)
         new_instruction = env.get_language_instruction()
         if new_instruction != instruction:
             instruction = new_instruction
             print("New Instruction", instruction)
-        time.sleep(0.01)
 
     episode_stats = info.get("episode_stats", {})
     print("Episode stats", episode_stats)
-    await player.stop()
+    loop.call_soon_threadsafe(player.stop)
+
+
+async def run_simulation(player):
+    """
+    This async function prepares the event loop and runs the blocking
+    simulation in a separate thread to avoid blocking the asyncio event loop.
+    """
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, blocking_run_simulation, loop, player)
 
 
 if __name__ == "__main__":
