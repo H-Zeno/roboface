@@ -5,6 +5,8 @@ description = "The AI Native Open Source Robotics Stack"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "aiohttp>=3.12.12",
+    "aiortc>=1.10.1",
     "simpler-env",
 ]
 

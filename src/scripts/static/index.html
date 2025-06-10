@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC test</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        #video {
+            background-color: #000;
+            width: 640px;
+            height: 480px;
+        }
+    </style>
+</head>
+<body>
+    <button id="start">Start</button>
+    <video id="video" autoplay playsinline></video>
+    <script>
+        document.getElementById('start').onclick = async () => {
+            const pc = new RTCPeerConnection({
+                iceServers: [{
+                    urls: 'stun:stun.l.google.com:19302'
+                }]
+            });
+
+            pc.ontrack = (event) => {
+                document.getElementById('video').srcObject = event.streams[0];
+            };
+
+            pc.addTransceiver('video', {'direction': 'recvonly'});
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            const response = await fetch('/offer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sdp: pc.localDescription.sdp,
+                    type: pc.localDescription.type,
+                }),
+            });
+
+            const answer = await response.json();
+            await pc.setRemoteDescription(answer);
+        };
+    </script>
+</body>
+</html>
