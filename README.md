@@ -14,6 +14,25 @@ $ apt update
 $ apt upgrade
 $ apt install vim
 ```
+
+#### Vulkan Setup:
+```bash
+$ apt update && apt install -y libegl1 libxext6 vulkan-tools
+$ mkdir -p /usr/share/vulkan/icd.d 
+$ mkdir -p /usr/share/glvnd/egl_vendor.d
+$ cat > /usr/share/vulkan/icd.d/nvidia_icd.json << 'EOF'
+{
+    "file_format_version" : "1.0.0",
+    "ICD": {
+        "library_path": "libGLX_nvidia.so.0",
+        "api_version" : "1.3.277"
+    }
+}
+EOF
+# Check that vulkan can access GPU
+$ vulkaninfo | grep NVIDIA
+```
+
 #### On every machine
 ```bash
 # Install the ultra-fast Python tool-chain manager `uv`
