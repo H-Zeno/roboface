@@ -19,7 +19,7 @@ from av import VideoFrame
 from simpler_env.utils.env.observation_utils import get_image_from_maniskill2_obs_dict
 
 logging.basicConfig(level=logging.INFO)
-ROOT = os.path.dirname(__file__)
+ROOT = os.path.dirname(os.path.dirname(__file__))
 pcs = set()
 
 
@@ -50,7 +50,7 @@ class VideoTransformTrack(VideoStreamTrack):
 
 
 async def index(request):
-    content = open(os.path.join(ROOT, "static/index.html"), "r").read()
+    content = open(os.path.join(ROOT, "frontend/index.html"), "r").read()
     return web.Response(content_type="text/html", text=content)
 
 

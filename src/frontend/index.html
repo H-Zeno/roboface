@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC Video Stream</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            background-color: black;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .status-connecting {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC Video Stream</h1>
+        <div id="status" class="status-connecting">Ready to connect...</div>
+        <video id="video" autoplay muted playsinline></video>
+        <br>
+        <button id="start" onclick="start()">Start Simulator</button>
+        <button id="stop" onclick="stop()" disabled>Stop Simulator</button>
+    </div>
+
+    <script>
+        var pc = null;
+        var video = document.getElementById('video');
+        var startButton = document.getElementById('start');
+        var stopButton = document.getElementById('stop');
+        var statusDiv = document.getElementById('status');
+
+        function updateStatus(message, type = 'connecting') {
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-' + type;
+        }
+
+        async function start() {
+            try {
+                updateStatus('Connecting...', 'connecting');
+                startButton.disabled = true;
+
+                pc = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                });
+
+                pc.ontrack = function(event) {
+                    console.log('Received track:', event.track.kind);
+                    if (event.track.kind === 'video') {
+                        video.srcObject = event.streams[0];
+                        updateStatus('Connected! Receiving video stream.', 'connected');
+                        stopButton.disabled = false;
+                    }
+                };
+
+                pc.oniceconnectionstatechange = function() {
+                    console.log('ICE connection state:', pc.iceConnectionState);
+                    if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                        updateStatus('Connection failed. Please try again.', 'error');
+                        stop();
+                    }
+                };
+
+                pc.onicecandidate = (e) => {
+                    if (e.candidate === null) {
+                        updateStatus('ICE gathering complete. Sending offer...', 'connecting');
+                        const offer = pc.localDescription;
+                        fetch('/offer', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sdp: offer.sdp, type: offer.type }),
+                        })
+                        .then(res => {
+                            if (!res.ok) {
+                                throw new Error(`Server responded with status: ${res.status}`);
+                            }
+                            return res.json();
+                        })
+                        .then(answer => {
+                            if (!answer.sdp || !answer.type) {
+                                throw new Error("Server response missing 'sdp' or 'type' field");
+                            }
+                            console.log("Received answer from server.");
+                            return pc.setRemoteDescription(new RTCSessionDescription(answer));
+                        })
+                        .catch(err => {
+                            updateStatus(`Error: ${err.message}`, 'error');
+                            stop();
+                        });
+                    }
+                };
+
+                pc.addTransceiver('video', { direction: 'recvonly' });
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                updateStatus('Gathering ICE candidates...', 'connecting');
+
+            } catch (error) {
+                console.error('Error:', error);
+                updateStatus('Error: ' + error.message, 'error');
+                stop();
+            }
+        }
+
+        function stop() {
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            video.srcObject = null;
+            updateStatus('Disconnected.', 'connecting');
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        window.addEventListener('beforeunload', stop);
+    </script>
+</body>
+</html>
