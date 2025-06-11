@@ -1,11 +1,10 @@
+import argparse
 import asyncio
 import json
 import logging
 import os
 import uuid
 
-import cv2
-import numpy as np
 import simpler_env
 from aiohttp import web
 from aiortc import (
@@ -50,7 +49,7 @@ class VideoTransformTrack(VideoStreamTrack):
 
 
 async def index(request):
-    content = open(os.path.join(ROOT, "frontend/index.html"), "r").read()
+    content = open(os.path.join(ROOT, "src/frontend/index.html"), "r").read()
     return web.Response(content_type="text/html", text=content)
 
 
@@ -142,14 +141,7 @@ def blocking_run_simulation(loop, player):
     done, truncated = False, False
     while not (done or truncated):
         image = get_image_from_maniskill2_obs_dict(env, obs)
-
-        # # a temporary fix for the issue of the image being in BGR format
-        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # Manually construct the VideoFrame
         frame = VideoFrame.from_ndarray(image, format="rgb24")
-
-        # Safely put the frame in the queue from the separate thread
         loop.call_soon_threadsafe(player._queue.put_nowait, frame)
 
         action = env.action_space.sample()
@@ -174,8 +166,14 @@ async def run_simulation(player):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="WebRTC example")
+    parser.add_argument(
+        "--port", type=int, default=3000, help="Port for the web server"
+    )
+    args = parser.parse_args()
+
     app = web.Application()
     app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", index)
     app.router.add_post("/offer", offer)
-    web.run_app(app, host="0.0.0.0", port=4040)
+    web.run_app(app, host="0.0.0.0", port=args.port)
