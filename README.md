@@ -140,7 +140,7 @@ $ git submodule update --init --recursive   # check out the new commits
 
 ---
 
-## 7. Run WebRTC example
+## 6. Run WebRTC example
 ```bash
 # Run on the GPU VM from roboface root folder and specify an exposed tcp port (3000 is just an example)
 # Check in the VM config what public port this gets mapped to via NAT (40701 is just an example)
@@ -148,7 +148,7 @@ $ uv run scripts/webrtc_example.py --port 40701
 # Now in a browser you can run the example via: http://{public-vm-ip}:40701
 ```
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom                            | Fix                                                                                                 |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -159,7 +159,7 @@ $ uv run scripts/webrtc_example.py --port 40701
 
 ---
 
-## 7. Additional references
+## 8. Additional references
 
 - uv documentation – https://docs.astral.sh/uv/
 - Submodule survival guide – https://delicious-insights.com/en/posts/mastering-git-submodules/
