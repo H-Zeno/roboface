@@ -13,6 +13,8 @@ Roboface is an **AI-native open-source robotics stack**. This repository is the 
 $ apt update
 $ apt upgrade
 $ apt install vim
+# Install python dev headers (needed for ruckig dependency)
+$ apt install python3-dev python3.10-dev
 ```
 
 #### Vulkan Setup:
@@ -42,25 +44,21 @@ $ curl -Ls https://astral.sh/uv/install.sh | bash            #   or brew install
 $ curl -sfL https://direnv.net/install.sh | bash
 ```
 
-
-
 ```bash
 # 1. Clone *recursively* so that submodules are fetched too
 $ git clone --recursive https://github.com/Roboface/roboface.git
 $ cd roboface
 
-
-# 3. Enable direnv so the correct .venv is auto-activated
-
+# 2. Enable direnv so the correct .venv is auto-activated
 # Add the following line to the ~/.bashrc:
 $ eval "$(direnv hook bash)"
 # Write this in the terminal at the root directory (/roboface) and the roboface/SimplerEnv directory
 $ direnv allow                                              # once per clone
 
-# 4. Create / update the project environment
+# 3. Create / update the project environment
 $ uv sync                                                   # installs exact versions from uv.lock into .venv (will check if the env is up-to-date as well)
 
-# 5. Smoke-test
+# 4. Smoke-test
 $ uv run SimplerEnv/scripts/getting_started.py              
 ```
 
@@ -142,7 +140,15 @@ $ git submodule update --init --recursive   # check out the new commits
 
 ---
 
-## 6. Troubleshooting
+## 6. Run WebRTC example
+```bash
+# Run on the GPU VM from roboface root folder and specify an exposed tcp port (e.g. 3000)
+# Check in the VM config what public port this gets mapped to via NAT (e.g. 40701)
+$ uv run scripts/webrtc_example.py --port 3000
+# Now in a browser you can run the example via: http://{public-vm-ip}:40701
+```
+
+## 7. Troubleshooting
 
 | Symptom                            | Fix                                                                                                 |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -153,7 +159,7 @@ $ git submodule update --init --recursive   # check out the new commits
 
 ---
 
-## 7. Additional references
+## 8. Additional references
 
 - uv documentation – https://docs.astral.sh/uv/
 - Submodule survival guide – https://delicious-insights.com/en/posts/mastering-git-submodules/
